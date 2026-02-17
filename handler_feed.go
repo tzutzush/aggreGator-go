@@ -76,18 +76,16 @@ func handlerAddFeed(s *state, cmd command) error {
 	if len(cmd.arguments) != 2 {
 		return fmt.Errorf("addfeed command needs a two arguments, first the name, second the url")
 	}
+	ctx := context.Background()
 	name := cmd.arguments[0]
 	url := cmd.arguments[1]
-	user, err := s.db.GetUser(context.Background(), s.config.CurrentUserName)
+	currentUser, err := s.db.GetUser(ctx, s.config.CurrentUserName)
 	if err != nil {
 		return err
 	}
-	_, err = s.db.CreateFeed(context.Background(), database.CreateFeedParams{
-		ID: uuid.New(),
-		Url: sql.NullString{
-			String: url,
-			Valid:  true,
-		},
+	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
+		ID:  uuid.New(),
+		Url: url,
 		CreatedAt: sql.NullTime{
 			Time:  time.Now(),
 			Valid: true,
@@ -97,7 +95,24 @@ func handlerAddFeed(s *state, cmd command) error {
 			Valid: true,
 		},
 		Name:   name,
-		UserID: user.ID,
+		UserID: currentUser.ID,
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Println("Feed added")
+	_, err = s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID: uuid.New(),
+		CreatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		UserID: currentUser.ID,
+		FeedID: feed.ID,
 	})
 	if err != nil {
 		return err
@@ -111,7 +126,7 @@ func handlerListFeeds(s *state, cmd command) error {
 	}
 
 	ctx := context.Background()
-	feeds, err := s.db.ListAllFeeds(ctx)
+	feeds, err := s.db.GetAllFeeds(ctx)
 	if err != nil {
 		return err
 	}

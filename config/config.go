@@ -35,7 +35,6 @@ func (c *Config) SetUser(userName string) error {
 	data, err := json.Marshal(c)
 
 	err = os.WriteFile(path, data, 0666)
-	fmt.Println("User set successfully")
 	return err
 }
 
