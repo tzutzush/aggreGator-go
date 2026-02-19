@@ -3,7 +3,6 @@ package main
 import (
 	"aggreGATOR/internal/database"
 	"context"
-	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"html"
@@ -61,58 +60,32 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &feed, nil
 }
 
-func handlerAgg(s *state, cmd command) error {
-	if len(cmd.arguments) > 1 {
-		return fmt.Errorf("aggregate command needs a single argument, the url")
-	}
-	_, err := fetchFeed(context.Background(), "")
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.arguments) != 2 {
 		return fmt.Errorf("addfeed command needs a two arguments, first the name, second the url")
 	}
 	ctx := context.Background()
 	name := cmd.arguments[0]
 	url := cmd.arguments[1]
-	currentUser, err := s.db.GetUser(ctx, s.config.CurrentUserName)
-	if err != nil {
-		return err
-	}
 	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
-		ID:  uuid.New(),
-		Url: url,
-		CreatedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		UpdatedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		Name:   name,
-		UserID: currentUser.ID,
+		ID:            uuid.New(),
+		Url:           url,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+		Name:          name,
+		LastFetchedAt: time.Now(),
+		UserID:        user.ID,
 	})
 	if err != nil {
 		return err
 	}
 	fmt.Println("Feed added")
 	_, err = s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
-		ID: uuid.New(),
-		CreatedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		UpdatedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		UserID: currentUser.ID,
-		FeedID: feed.ID,
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
 	})
 	if err != nil {
 		return err

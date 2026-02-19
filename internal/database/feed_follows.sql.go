@@ -7,7 +7,7 @@ package database
 
 import (
 	"context"
-	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -34,16 +34,16 @@ FROM inserted_feed_follow
 
 type CreateFeedFollowParams struct {
 	ID        uuid.UUID
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	UserID    uuid.UUID
 	FeedID    uuid.UUID
 }
 
 type CreateFeedFollowRow struct {
 	ID        uuid.UUID
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	UserID    uuid.UUID
 	FeedID    uuid.UUID
 	FeedName  string
@@ -69,6 +69,20 @@ func (q *Queries) CreateFeedFollow(ctx context.Context, arg CreateFeedFollowPara
 		&i.UserName,
 	)
 	return i, err
+}
+
+const deleteFeedFollowFromUser = `-- name: DeleteFeedFollowFromUser :exec
+DELETE FROM feed_follows WHERE feed_follows.user_id = $1 AND feed_follows.feed_id = $2
+`
+
+type DeleteFeedFollowFromUserParams struct {
+	UserID uuid.UUID
+	FeedID uuid.UUID
+}
+
+func (q *Queries) DeleteFeedFollowFromUser(ctx context.Context, arg DeleteFeedFollowFromUserParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFeedFollowFromUser, arg.UserID, arg.FeedID)
+	return err
 }
 
 const getFeedFollowsByUser = `-- name: GetFeedFollowsByUser :many
